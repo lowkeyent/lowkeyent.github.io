@@ -175,16 +175,16 @@
 
   .tracks{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:10px}
   .tracks[hidden]{display:none}
-  .track{
+  .drop{
     display:flex;align-items:center;gap:8px;max-width:100%;cursor:pointer;
     padding:7px 14px;border-radius:999px;font:500 13px var(--body);color:var(--text-dim);
     background:rgba(14,31,60,.55);border:1px solid var(--card-border);
     -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:border-color .2s,color .2s;
   }
-  .track:hover{border-color:var(--powder);color:var(--text)}
-  .track.on{border-color:var(--powder);color:var(--white);box-shadow:0 0 14px rgba(123,178,221,.25)}
-  .track .tn{font-family:var(--display);letter-spacing:.08em;color:var(--powder)}
-  .track .tt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+  .drop:hover{border-color:var(--powder);color:var(--text)}
+  .drop.on{border-color:var(--powder);color:var(--white);box-shadow:0 0 14px rgba(123,178,221,.25)}
+  .drop .tn{font-family:var(--display);letter-spacing:.08em;color:var(--powder)}
+  .drop .tt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
 
   /* ---------- EMBEDS (Spotify / SoundCloud) ---------- */
   .embed{border-radius:14px;overflow:hidden;border:1px solid var(--card-border);background:var(--card);margin-bottom:10px}
@@ -397,16 +397,17 @@
 <script>
   /* ================= EDIT THESE =================
      videos     : your YouTube drops, newest first. id = the part after youtu.be/
-                  label shows until the real YouTube title loads.
+                  label = song name shown on the site (leave '' to use the YouTube title).
      spotify    : any open.spotify.com link (artist, album, track or playlist), or ''
      soundcloud : any soundcloud.com link (profile, track or set), or ''
      Leave '' to hide that player. */
   const CONFIG = {
     videos: [
-      { id: 'x7hCb1GE00o', label: 'Latest Drop' },
-      { id: 'CNf7-w48QcY', label: 'Drop 2' },
-      { id: 'Ht9gGlQ1iwQ', label: 'Drop 3' },
-      { id: 'Qtvf8Q2oKiM', label: 'Drop 4' }
+      { id: 'x7hCb1GE00o', label: 'Lean Fiend' },
+      { id: 'CNf7-w48QcY', label: 'Super Bad' },
+      { id: 'Ht9gGlQ1iwQ', label: 'Air Em Out' },
+      { id: 'As5euZ_Yl7g', label: '' },
+      { id: 'Qtvf8Q2oKiM', label: 'K-Oz Drop' }
     ],
     spotify:    '',
     soundcloud: ''
@@ -445,14 +446,14 @@
   const tracksEl = document.getElementById('tracks');
   let ci = 0;                                  // index of the current track
   const cur = () => CONFIG.videos[ci];
-  const nameOf = v => v.title || v.label;
+  const nameOf = (v, i = CONFIG.videos.indexOf(v)) => v.label || v.title || ('Drop ' + (i + 1));
 
   function renderTracks(){
     nowTitle.textContent = nameOf(cur());
     ytLink.href = 'https://youtu.be/' + cur().id;
     if (CONFIG.videos.length < 2) { tracksEl.hidden = true; return; }
     tracksEl.innerHTML = CONFIG.videos.map((v, i) =>
-      `<button type="button" class="track${i === ci ? ' on' : ''}" data-i="${i}" aria-pressed="${i === ci}">
+      `<button type="button" class="drop${i === ci ? ' on' : ''}" data-i="${i}" aria-pressed="${i === ci}">
          <span class="tn">${String(i + 1).padStart(2, '0')}</span><span class="tt">${nameOf(v)}</span>
        </button>`).join('');
   }
@@ -556,7 +557,7 @@
     else loadYouTube();               // first play: the player starts on the chosen track
   }
   tracksEl.addEventListener('click', e => {
-    const b = e.target.closest('.track'); if (!b) return;
+    const b = e.target.closest('.drop'); if (!b) return;
     selectTrack(+b.dataset.i);
   });
 
