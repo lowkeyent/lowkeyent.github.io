@@ -262,6 +262,8 @@
     padding:20px 16px calc(30px + env(safe-area-inset-bottom));border-top:1px solid var(--card-border);
   }
   footer b{font-family:var(--display);font-weight:400;letter-spacing:.14em;color:var(--text)}
+  footer .credit{margin-top:8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-dim)}
+  footer .credit b{color:var(--powder)}
 
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
@@ -374,7 +376,10 @@
   </section>
 </main>
 
-<footer>© <span id="yr"></span> <b>LOW-KEY ENT</b> — all links open in a new tab</footer>
+<footer>
+  <p>© <span id="yr"></span> <b>LOW-KEY ENT</b> — all links open in a new tab</p>
+  <p class="credit">Made by <b>1500 ENT</b></p>
+</footer>
 
 <script>
   /* ================= EDIT THESE =================
