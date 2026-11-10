@@ -174,6 +174,16 @@
   .bar>div{transition:width .25s linear}
   .eq.paused i{animation-play-state:paused;height:3px}
 
+  .sound-on{
+    position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;
+    display:flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;cursor:pointer;
+    font-family:var(--display);letter-spacing:.18em;font-size:13px;text-transform:uppercase;color:var(--bg);
+    background:var(--white);border:0;box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 24px rgba(123,178,221,.55);
+    animation:soundPulse 1.8s ease-in-out infinite;
+  }
+  .sound-on[hidden]{display:none}
+  .sound-on .eq i{background:var(--royal)}
+  @keyframes soundPulse{50%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 8px rgba(123,178,221,.25)}}
   .tracks{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:10px}
   .tracks[hidden]{display:none}
   .drop{
@@ -328,6 +338,11 @@
   <p class="scroll">Scroll <span>↓</span></p>
 </header>
 
+<button class="sound-on" id="soundOn" type="button" hidden>
+  <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <span>Tap anywhere for sound</span>
+</button>
+
 <div class="tapes" aria-hidden="true">
   <div class="tape a"><div class="track">
     <span>LOW-KEY ENT</span><em>✕</em><span>Kansas City</span><em>✕</em><span>New Music</span><em>✕</em><span>Live Streams</span><em>✕</em><span>Independent</span><em>✕</em>
@@ -413,7 +428,8 @@
       { id: 'Qtvf8Q2oKiM', label: 'K-Oz Drop' }
     ],
     spotify:    '',
-    soundcloud: ''
+    soundcloud: '',
+    autoplay:   true    // start the music as soon as the page opens
   };
   /* ============================================== */
 
@@ -509,7 +525,18 @@
         videoId: cur().id,
         playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1 },
         events: {
-          onReady: e => { ready = true; clearTimeout(readyTimer); fill.style.width = '0%'; e.target.playVideo(); updateProgress(); },
+          onReady: e => {
+            ready = true; clearTimeout(readyTimer); fill.style.width = '0%';
+            e.target.playVideo(); updateProgress();
+            if (autoStarted) {
+              // Browsers block sound until the visitor interacts. If it didn't start, play muted and ask for a tap.
+              setTimeout(() => {
+                if (e.target.getPlayerState() !== YT.PlayerState.PLAYING || e.target.isMuted()) {
+                  e.target.mute(); e.target.playVideo(); soundOn.hidden = false;
+                }
+              }, 1200);
+            }
+          },
           onError: e => {
             // 101/150 = embedding turned off for this video; 153 = page has no web address
             const msg = (e.data === 101 || e.data === 150)
@@ -544,6 +571,7 @@
     videoBox.classList.add('open');
     if (!player) { loadYouTube(); return; }
     if (!ready) return;
+    if (player.isMuted() && !soundOn.hidden) { enableSound(); return; }
     player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo();
   });
 
@@ -563,6 +591,25 @@
     const b = e.target.closest('.drop'); if (!b) return;
     selectTrack(+b.dataset.i);
   });
+
+  // ---------- Autoplay on open ----------
+  const soundOn = document.getElementById('soundOn');
+  let autoStarted = false;
+  function enableSound(){
+    if (!ready) return;
+    player.unMute(); player.setVolume(100); player.playVideo();
+    soundOn.hidden = true;
+  }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
+    addEventListener(ev, e => {
+      if (soundOn.hidden || e.target.closest('#playBtn')) return;   // play button handles its own tap
+      enableSound();
+    }, { capture: true, passive: true }));
+  if (CONFIG.autoplay && canEmbed) {
+    autoStarted = true;
+    videoBox.classList.add('open');
+    loadYouTube();
+  }
 
   // Tap / drag the bar to seek
   function seekFrom(clientX){
