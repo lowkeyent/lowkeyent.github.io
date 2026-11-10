@@ -173,6 +173,19 @@
   .bar>div{transition:width .25s linear}
   .eq.paused i{animation-play-state:paused;height:3px}
 
+  .tracks{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:10px}
+  .tracks[hidden]{display:none}
+  .track{
+    display:flex;align-items:center;gap:8px;max-width:100%;cursor:pointer;
+    padding:7px 14px;border-radius:999px;font:500 13px var(--body);color:var(--text-dim);
+    background:rgba(14,31,60,.55);border:1px solid var(--card-border);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:border-color .2s,color .2s;
+  }
+  .track:hover{border-color:var(--powder);color:var(--text)}
+  .track.on{border-color:var(--powder);color:var(--white);box-shadow:0 0 14px rgba(123,178,221,.25)}
+  .track .tn{font-family:var(--display);letter-spacing:.08em;color:var(--powder)}
+  .track .tt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+
   /* ---------- EMBEDS (Spotify / SoundCloud) ---------- */
   .embed{border-radius:14px;overflow:hidden;border:1px solid var(--card-border);background:var(--card);margin-bottom:10px}
   .embed iframe{display:block;width:100%;border:0}
@@ -304,11 +317,12 @@
       <button class="play" id="playBtn" type="button" aria-label="Play Latest Drop">▶</button>
       <div class="now-info">
         <div class="now-top"><span class="now-title">Latest Drop</span><span class="eq paused" id="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
-        <div class="now-sub"><a id="ytLink" href="https://youtu.be/Qtvf8Q2oKiM" target="_blank" rel="noopener">Watch on YouTube</a><span class="time" id="time"></span></div>
+        <div class="now-sub"><a id="ytLink" href="https://youtu.be/x7hCb1GE00o" target="_blank" rel="noopener">Watch on YouTube</a><span class="time" id="time"></span></div>
         <div class="bar" id="bar" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><div id="fill" style="width:28%"></div></div>
       </div>
       <a class="pill" href="#support">Support</a>
     </div>
+    <div class="tracks" id="tracks" aria-label="Drops"></div>
   </div>
   <p class="scroll">Scroll <span>↓</span></p>
 </header>
@@ -382,12 +396,17 @@
 
 <script>
   /* ================= EDIT THESE =================
-     youtubeId  : the part after youtu.be/  (your Latest Drop)
+     videos     : your YouTube drops, newest first. id = the part after youtu.be/
+                  label shows until the real YouTube title loads.
      spotify    : any open.spotify.com link (artist, album, track or playlist), or ''
      soundcloud : any soundcloud.com link (profile, track or set), or ''
      Leave '' to hide that player. */
   const CONFIG = {
-    youtubeId:  'Qtvf8Q2oKiM',
+    videos: [
+      { id: 'x7hCb1GE00o', label: 'Latest Drop' },
+      { id: 'CNf7-w48QcY', label: 'Drop 2' },
+      { id: 'Qtvf8Q2oKiM', label: 'Drop 3' }
+    ],
     spotify:    '',
     soundcloud: ''
   };
@@ -420,7 +439,23 @@
   const bar = document.getElementById('bar');
   const timeEl = document.getElementById('time');
   const eq = document.getElementById('eq');
-  document.getElementById('ytLink').href = 'https://youtu.be/' + CONFIG.youtubeId;
+  const ytLink = document.getElementById('ytLink');
+  const nowTitle = document.querySelector('.now-title');
+  const tracksEl = document.getElementById('tracks');
+  let ci = 0;                                  // index of the current track
+  const cur = () => CONFIG.videos[ci];
+  const nameOf = v => v.title || v.label;
+
+  function renderTracks(){
+    nowTitle.textContent = nameOf(cur());
+    ytLink.href = 'https://youtu.be/' + cur().id;
+    if (CONFIG.videos.length < 2) { tracksEl.hidden = true; return; }
+    tracksEl.innerHTML = CONFIG.videos.map((v, i) =>
+      `<button type="button" class="track${i === ci ? ' on' : ''}" data-i="${i}" aria-pressed="${i === ci}">
+         <span class="tn">${String(i + 1).padStart(2, '0')}</span><span class="tt">${nameOf(v)}</span>
+       </button>`).join('');
+  }
+  renderTracks();
 
   let player = null, ready = false, ticker = null, apiLoading = false;
   const fmt = s => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
@@ -428,7 +463,7 @@
   function setPlayingUI(on){
     playBtn.textContent = on ? '❚❚' : '▶';
     playBtn.style.paddingLeft = on ? '0' : '3px';
-    playBtn.setAttribute('aria-label', on ? 'Pause Latest Drop' : 'Play Latest Drop');
+    playBtn.setAttribute('aria-label', (on ? 'Pause ' : 'Play ') + nameOf(cur()));
     eq.classList.toggle('paused', !on);
     clearInterval(ticker);
     if (on) ticker = setInterval(updateProgress, 500);
@@ -450,9 +485,9 @@
     setPlayingUI(false);
     videoBox.classList.add('open');
     videoBox.innerHTML =
-      `<a class="fallback" href="https://youtu.be/${CONFIG.youtubeId}" target="_blank" rel="noopener">
+      `<a class="fallback" href="https://youtu.be/${cur().id}" target="_blank" rel="noopener">
          <span class="play" aria-hidden="true">▶</span>
-         <strong>Watch the Latest Drop on YouTube</strong>
+         <strong>Watch “${nameOf(cur())}” on YouTube</strong>
          <small>${reason}</small>
        </a>`;
   }
@@ -466,7 +501,7 @@
     window.onYouTubeIframeAPIReady = () => {
       player = new YT.Player('yt', {
         host: 'https://www.youtube-nocookie.com',
-        videoId: CONFIG.youtubeId,
+        videoId: cur().id,
         playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1 },
         events: {
           onReady: e => { ready = true; clearTimeout(readyTimer); fill.style.width = '0%'; e.target.playVideo(); updateProgress(); },
@@ -478,8 +513,16 @@
             showFallback(msg);
           },
           onStateChange: e => {
-            if (e.data === YT.PlayerState.PLAYING) setPlayingUI(true);
-            else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) { setPlayingUI(false); updateProgress(); }
+            if (e.data === YT.PlayerState.PLAYING) {
+              setPlayingUI(true);
+              const t = (player.getVideoData() || {}).title;
+              if (t && t !== cur().title) { cur().title = t; renderTracks(); }
+            }
+            else if (e.data === YT.PlayerState.PAUSED) { setPlayingUI(false); updateProgress(); }
+            else if (e.data === YT.PlayerState.ENDED) {
+              setPlayingUI(false); updateProgress();
+              if (ci < CONFIG.videos.length - 1) selectTrack(ci + 1);   // roll into the next drop
+            }
           }
         }
       });
@@ -491,12 +534,29 @@
   }
 
   playBtn.addEventListener('click', () => {
-    if (failed) { window.open('https://youtu.be/' + CONFIG.youtubeId, '_blank', 'noopener'); return; }
+    if (failed) { window.open('https://youtu.be/' + cur().id, '_blank', 'noopener'); return; }
     if (!canEmbed) { showFallback('Upload the site to a web host to play the video here. For now, tap to watch on YouTube.'); return; }
     videoBox.classList.add('open');
     if (!player) { loadYouTube(); return; }
     if (!ready) return;
     player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo();
+  });
+
+  function selectTrack(i){
+    ci = i;
+    renderTracks();
+    fill.style.width = '0%'; timeEl.textContent = '';
+    if (failed) {                     // player unavailable here: point the fallback at this track
+      failed = false; showFallback('Tap to watch on YouTube.'); return;
+    }
+    if (!canEmbed) { showFallback('Upload the site to a web host to play the video here. For now, tap to watch on YouTube.'); return; }
+    videoBox.classList.add('open');
+    if (ready) player.loadVideoById(cur().id);
+    else loadYouTube();               // first play: the player starts on the chosen track
+  }
+  tracksEl.addEventListener('click', e => {
+    const b = e.target.closest('.track'); if (!b) return;
+    selectTrack(+b.dataset.i);
   });
 
   // Tap / drag the bar to seek
